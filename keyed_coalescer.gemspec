@@ -8,6 +8,6 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/smallprimitives/keyed_coalescer"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.4"
-  spec.files = ["LICENSE", "README.md", "lib/keyed_coalescer.rb"]
+  spec.files = ["LICENSE-MIT", "README.md", "lib/keyed_coalescer.rb"]
   spec.require_paths = ["lib"]
 end
