@@ -1,0 +1,60 @@
+name: Publish gem to RubyGems.org
+
+"on":
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Approved gem version
+        required: true
+        type: string
+      revision:
+        description: Full commit SHA of the checked release source
+        required: true
+        type: string
+      checksum:
+        description: SHA-256 of the verified gem
+        required: true
+        type: string
+
+      owner:
+        description: RubyGems account ID for the first release of a new gem (leave blank for existing gems)
+        required: false
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-rubygems
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    environment: rubygems
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@145243922b4465b78e04dd66294782c7de45901f # v1.345.0
+        with:
+          ruby-version: "3.4.13"
+      - name: Build and verify the approved gem
+        env:
+          VERSION: ${{ inputs.version }}
+          REVISION: ${{ inputs.revision }}
+          CHECKSUM: ${{ inputs.checksum }}
+        run: bash .github/scripts/build-release-gem.sh
+      - name: Exchange the GitHub identity for a short-lived RubyGems token
+        uses: rubygems/configure-rubygems-credentials@c6ca7f4bac0e29c9bde8eeae0a0a986b27efa05f # v2.2.0
+        with:
+          owner: ${{ inputs.owner }}
+      - name: Publish to RubyGems.org
+        env:
+          VERSION: ${{ inputs.version }}
+        run: gem push --host https://rubygems.org "$RUNNER_TEMP/keyed_coalescer-$VERSION.gem"
