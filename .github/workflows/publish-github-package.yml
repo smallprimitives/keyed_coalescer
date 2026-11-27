@@ -1,0 +1,51 @@
+name: Publish gem to GitHub Packages
+
+"on":
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Approved gem version
+        required: true
+        type: string
+      revision:
+        description: Full commit SHA of the checked release source
+        required: true
+        type: string
+      checksum:
+        description: SHA-256 of the verified gem
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: publish-github-package
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@145243922b4465b78e04dd66294782c7de45901f # v1.345.0
+        with:
+          ruby-version: "3.4.13"
+      - name: Build and verify the approved gem
+        env:
+          VERSION: ${{ inputs.version }}
+          REVISION: ${{ inputs.revision }}
+          CHECKSUM: ${{ inputs.checksum }}
+        run: bash .github/scripts/build-release-gem.sh
+      - name: Publish to Small Primitives on GitHub Packages
+        env:
+          GEM_HOST_API_KEY: Bearer ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: gem push --host https://rubygems.pkg.github.com/smallprimitives "$RUNNER_TEMP/keyed_coalescer-$VERSION.gem"
